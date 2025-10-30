@@ -19,7 +19,7 @@
       transition: background 0.5s, color 0.5s;
     }
 
-    #container { text-align: center; padding: 20px; max-width: 780px; }
+    #container { text-align: center; padding: 20px; max-width: 800px; z-index: 2; position: relative; }
 
     input {
       font-family: inherit;
@@ -35,7 +35,7 @@
     button {
       margin-top: 12px;
       padding: 10px 20px;
-      font-size: 1rem;
+      font-size: 1.1rem;
       cursor: pointer;
       border: none;
       border-radius: 6px;
@@ -43,14 +43,17 @@
 
     #timer {
       position: fixed;
-      top: 10px;
-      right: 20px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      background: rgba(0,0,0,.25);
-      padding: 4px 10px;
-      border-radius: 8px;
-      transition: color 0.3s ease;
+      top: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14rem;
+      font-weight: 900;
+      text-shadow: 0 0 50px rgba(0,0,0,0.8);
+      color: white;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.25;
+      transition: color 0.3s ease, opacity 0.5s ease;
     }
 
     #message {
@@ -103,8 +106,10 @@
       timerEl.textContent = `${m}:${s}`;
       if (remaining <= 60) {
         timerEl.style.color = 'red';
+        timerEl.style.opacity = '0.4';
       } else {
         timerEl.style.color = 'white';
+        timerEl.style.opacity = '0.25';
       }
     }
 
@@ -115,8 +120,8 @@
 
       const lines = stage.prompt.split('\n').map(l => `<div>${l}</div>`).join('');
       container.innerHTML = `
-        <h2 style="margin-top:0">${lines}</h2>
-        <form id="form" autocomplete="off">
+        <h2 style="margin-top:0; position:relative; z-index:2;">${lines}</h2>
+        <form id="form" autocomplete="off" style="position:relative; z-index:2;">
           <input id="input" maxlength="${stage.length}" required aria-label="Lykilorð" />
           <div><button id="submit" type="submit">Staðfesta</button></div>
           <div id="message" aria-live="assertive"></div>
