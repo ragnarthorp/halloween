@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Niðurteljara-leikur</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      transition: background 0.5s, color 0.5s;
+    }
+
+    #container { text-align: center; padding: 20px; max-width: 780px; }
+
+    input {
+      font-family: inherit;
+      font-size: 1.8rem;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 6px;
+      text-align: center;
+      outline: none;
+      width: 18ch;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+    }
+
+    #timer {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      background: rgba(0,0,0,.25);
+      padding: 4px 10px;
+      border-radius: 8px;
+      transition: color 0.3s ease;
+    }
+
+    #message {
+      margin-top: 12px;
+      font-size: 1.2rem;
+      min-height: 1.5rem;
+    }
+
+    .blink { animation: blink 1s step-start 0s infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div id="timer" aria-live="polite">07:00</div>
+  <div id="container"></div>
+
+  <script>
+    const TOTAL_TIME = 420;
+    const PENALTY = 5;
+
+    let remaining = TOTAL_TIME;
+    let currentLevel = 0;
+    let interval;
+
+    const stages = [
+      { background: '#111', color: '#eee', inputColor: '#111', inputBg: '#eee', prompt: 'Sláðu inn þriggja stafa lykilorð', answer: 'CQD', length: 3 },
+      { background: '#06a606', color: '#000', inputColor: '#000', inputBg: '#c6ffc6', prompt: 'Elísabet, Vigdís, Obama, Fry, Descartes, Benjamín\n(Lykilorð: 6 stafir)', answer: 'ATHENA', length: 6 },
+      { background: '#b00000', color: '#fff', inputColor: '#fff', inputBg: '#330000', prompt: '13:30\n16:10\n21:25\n20:05\n(Lykilorð: 8 stafir)', answer: 'EDGARPOE', length: 8 },
+      { background: '#ffffff', color: '#000', inputColor: '#000', inputBg: '#eeeeee', prompt: 'Eiffel\nBig Ben\nPýramídinn mikli\nLouvre\nHallgrímskirkja\nTenerife\n(Lykilorð: 6 stafir)', answer: 'LOALOA', length: 6 }
+    ];
+
+    const container = document.getElementById('container');
+    const timerEl = document.getElementById('timer');
+
+    function startTimer() {
+      if (interval) clearInterval(interval);
+      interval = setInterval(() => {
+        remaining = Math.max(0, remaining - 1);
+        if (remaining <= 0) {
+          clearInterval(interval);
+          showBang();
+        }
+        updateTimer();
+      }, 1000);
+    }
+
+    function updateTimer() {
+      const m = Math.floor(remaining / 60).toString().padStart(2, '0');
+      const s = (remaining % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${m}:${s}`;
+      if (remaining <= 60) {
+        timerEl.style.color = 'red';
+      } else {
+        timerEl.style.color = 'white';
+      }
+    }
+
+    function showLevel() {
+      const stage = stages[currentLevel];
+      document.body.style.background = stage.background;
+      document.body.style.color = stage.color;
+
+      const lines = stage.prompt.split('\n').map(l => `<div>${l}</div>`).join('');
+      container.innerHTML = `
+        <h2 style="margin-top:0">${lines}</h2>
+        <form id="form" autocomplete="off">
+          <input id="input" maxlength="${stage.length}" required aria-label="Lykilorð" />
+          <div><button id="submit" type="submit">Staðfesta</button></div>
+          <div id="message" aria-live="assertive"></div>
+        </form>
+      `;
+
+      const input = document.getElementById('input');
+      input.style.background = stage.inputBg;
+      input.style.color = stage.inputColor;
+      input.value = '';
+      input.focus();
+
+      if (currentLevel === 0) {
+        input.style.textTransform = 'uppercase';
+        input.addEventListener('input', () => {
+          const s = input.selectionStart; const e = input.selectionEnd;
+          input.value = input.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0, stages[0].length);
+          try { input.setSelectionRange(s, e); } catch {}
+        });
+      }
+
+      const form = document.getElementById('form');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        checkAnswer();
+      });
+
+      input.addEventListener('input', () => {
+        const msg = document.getElementById('message');
+        if (msg) msg.textContent = '';
+      });
+    }
+
+    function norm(s){ return (s||'').trim().toUpperCase(); }
+
+    function penalize(){
+      remaining = Math.max(0, remaining - PENALTY);
+      updateTimer();
+      if (remaining <= 0) {
+        showBang();
+        return true;
+      }
+      return false;
+    }
+
+    function checkAnswer() {
+      const inputEl = document.getElementById('input');
+      const stage = stages[currentLevel];
+      const message = document.getElementById('message');
+      const val = norm(inputEl.value);
+
+      if (val.length !== stage.length) {
+        message.textContent = `Lykilorð á að vera ${stage.length} stafir.`;
+        message.style.color = 'yellow';
+        return;
+      }
+
+      if (val === norm(stage.answer)) {
+        currentLevel++;
+        if (currentLevel < stages.length) {
+          showLevel();
+        } else {
+          showWin();
+        }
+      } else {
+        if (!penalize()) {
+          message.textContent = 'Rangt! -5 sek';
+          message.style.color = 'yellow';
+        }
+      }
+    }
+
+    function showWin() {
+      if (interval) clearInterval(interval);
+      document.body.style.background = '#000';
+      document.body.style.color = '#0f0';
+      container.innerHTML = '<h1>💣 Sprenga afteng!</h1><button id="restart">Byrja aftur</button>';
+      const btn = document.getElementById('restart');
+      if (btn) btn.addEventListener('click', resetGame);
+      document.addEventListener('keydown', restartOnR);
+    }
+
+    function showBang() {
+      if (interval) clearInterval(interval);
+      document.body.style.background = '#ff0000';
+      document.body.style.color = '#fff';
+      container.innerHTML = '<h1 class="blink">💥 BANG!</h1><button id="restart">Reyna aftur</button>';
+      const btn = document.getElementById('restart');
+      if (btn) btn.addEventListener('click', resetGame);
+      document.addEventListener('keydown', restartOnR);
+    }
+
+    function restartOnR(e){
+      if (e.key.toLowerCase() === 'r') resetGame();
+    }
+
+    function resetGame(){
+      document.removeEventListener('keydown', restartOnR);
+      remaining = TOTAL_TIME;
+      currentLevel = 0;
+      updateTimer();
+      showLevel();
+      startTimer();
+    }
+
+    updateTimer();
+    showLevel();
+    startTimer();
+  </script>
+</body>
+</html>
